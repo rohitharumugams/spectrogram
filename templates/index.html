@@ -11,17 +11,25 @@
 <body>
   <h2>Spectrogram Generator</h2>
 
-  <div class="slider-group">
-    <label for="n_fft">FFT Size: <span id="n_fft_val">1024</span></label><br>
-    <input type="range" id="n_fft" min="256" max="8192" step="256" value="1024">
-  </div>
+  <form id="uploadForm">
+    <div class="slider-group">
+      <label for="n_fft">FFT Size: <span id="n_fft_val">1024</span></label><br>
+      <input type="range" id="n_fft" name="n_fft" min="256" max="8192" step="256" value="1024">
+    </div>
 
-  <div class="slider-group">
-    <label for="hop_length">Hop Length: <span id="hop_val">256</span></label><br>
-    <input type="range" id="hop_length" min="64" max="1024" step="64" value="256">
-  </div>
+    <div class="slider-group">
+      <label for="hop_length">Hop Length: <span id="hop_val">256</span></label><br>
+      <input type="range" id="hop_length" name="hop_length" min="64" max="1024" step="64" value="256">
+    </div>
 
-  <button onclick="updateSpectrogram()">Generate</button>
+    <div>
+      <label>Upload Audio File:</label><br>
+      <input type="file" id="audio" name="audio" accept=".mp3,.wav" required>
+    </div>
+
+    <br>
+    <button type="submit">Generate</button>
+  </form>
 
   <div style="margin-top: 20px;">
     <img id="spectrogram" src="/static/spectrogram.png?dummy=1" width="800">
@@ -36,16 +44,18 @@
     nfftSlider.oninput = () => nfftVal.textContent = nfftSlider.value;
     hopSlider.oninput = () => hopVal.textContent = hopSlider.value;
 
-    function updateSpectrogram() {
+    document.getElementById('uploadForm').onsubmit = function(e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
       fetch('/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `n_fft=${nfftSlider.value}&hop_length=${hopSlider.value}`
+        body: formData
       }).then(() => {
         const img = document.getElementById('spectrogram');
-        img.src = `/static/spectrogram.png?dummy=${Date.now()}`; // Prevent caching
+        img.src = `/static/spectrogram.png?dummy=${Date.now()}`;
       });
-    }
+    };
   </script>
 </body>
 </html>

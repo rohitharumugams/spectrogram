@@ -1,40 +1,35 @@
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request
 import matplotlib
-matplotlib.use('Agg')  # Use Agg backend for non-GUI environments
+matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 import librosa
 import librosa.display
 import numpy as np
 import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['SPECTROGRAM_PATH'] = 'static/spectrogram.png'
 
-AUDIO_PATH = "1.mp3"
-SPECTROGRAM_PATH = "static/spectrogram.png"
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs('static', exist_ok=True)
 
-# Ensure static folder exists
-os.makedirs("static", exist_ok=True)
+def generate_spectrogram(filepath, n_fft, hop_length):
+    y, sr = librosa.load(filepath, sr=None)
+    D = np.abs(librosa.stft(y, n_fft=n_fft, hop_length=hop_length, window='hamming'))
+    DB = librosa.amplitude_to_db(D, ref=np.max)
 
-# Generate a default spectrogram once at startup
-def generate_default_spectrogram():
-    if not os.path.exists(SPECTROGRAM_PATH):
-        print("Generating default spectrogram...")
-        y, sr = librosa.load(AUDIO_PATH, sr=None)
-        D = np.abs(librosa.stft(y, n_fft=1024, hop_length=256, window='hamming'))
-        DB = librosa.amplitude_to_db(D, ref=np.max)
-
-        plt.figure(figsize=(12, 4))
-        librosa.display.specshow(DB, sr=sr, hop_length=256, x_axis='time', y_axis='linear', fmin=0, fmax=5000)
-        plt.colorbar(format="%+2.0f dB")
-        plt.title("Default Spectrogram (Limited to 0–5000 Hz)")
-        plt.xlabel("Time [s]")
-        plt.ylabel("Frequency (Hz)")
-        plt.tight_layout()
-        plt.savefig(SPECTROGRAM_PATH)
-        plt.close()
-
-generate_default_spectrogram()
+    plt.figure(figsize=(12, 4))
+    librosa.display.specshow(DB, sr=sr, hop_length=hop_length, x_axis='time', y_axis='hz', fmin=0, fmax=5000)
+    plt.colorbar(format="%+2.0f dB")
+    plt.title(f"Spectrogram (n_fft={n_fft}, hop_length={hop_length})")
+    plt.xlabel("Time [s]")
+    plt.ylabel("Frequency (Hz)")
+    plt.tight_layout()
+    plt.savefig(app.config['SPECTROGRAM_PATH'])
+    plt.close()
 
 @app.route('/')
 def index():
@@ -46,20 +41,15 @@ def generate():
         n_fft = int(request.form['n_fft'])
         hop_length = int(request.form['hop_length'])
 
-        y, sr = librosa.load(AUDIO_PATH, sr=None)
-        D = np.abs(librosa.stft(y, n_fft=n_fft, hop_length=hop_length, window='hamming'))
-        DB = librosa.amplitude_to_db(D, ref=np.max)
+        file = request.files['audio']
+        if not file:
+            return "No file uploaded"
 
-        plt.figure(figsize=(12, 4))
-        librosa.display.specshow(DB, sr=sr, hop_length=256, x_axis='time', y_axis='hz', fmin=0, fmax=5000)
-        plt.colorbar(format="%+2.0f dB")
-        plt.title(f"Spectrogram (n_fft={n_fft}, hop_length={hop_length}, 0–5000 Hz)")
-        plt.xlabel("Time [s]")
-        plt.ylabel("Frequency (Hz)")
-        plt.tight_layout()
-        plt.savefig(SPECTROGRAM_PATH)
-        plt.close()
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
 
+        generate_spectrogram(filepath, n_fft, hop_length)
         return "ok"
 
     except Exception as e:
