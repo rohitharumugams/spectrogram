@@ -2,3 +2,4 @@ flask
 librosa
 matplotlib
 numpy
+gunicorn
