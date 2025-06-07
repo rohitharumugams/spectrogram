@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Spectrogram Viewer</title>
+  <title>Spectrogram Generator</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
     .slider-group { margin: 20px 0; }
@@ -13,13 +13,18 @@
 
   <form id="uploadForm">
     <div class="slider-group">
-      <label for="n_fft">FFT Size: <span id="n_fft_val">1024</span></label><br>
-      <input type="range" id="n_fft" name="n_fft" min="256" max="8192" step="256" value="1024">
+      <label for="window_size">Window Size (ms): <span id="window_val">46</span></label><br>
+      <input type="range" id="window_size" name="window_size" min="10" max="100" step="2" value="46">
+    </div>
+
+    <div class="slider-group">
+      <label for="sampling_rate">Sampling Rate (Hz): <span id="sr_val">64000</span></label><br>
+      <input type="range" id="sampling_rate" name="sampling_rate" min="8000" max="96000" step="1000" value="64000">
     </div>
 
     <div class="slider-group">
       <label for="hop_length">Hop Length: <span id="hop_val">256</span></label><br>
-      <input type="range" id="hop_length" name="hop_length" min="64" max="1024" step="64" value="256">
+      <input type="range" id="hop_length" name="hop_length" min="64" max="2048" step="64" value="256">
     </div>
 
     <div>
@@ -36,17 +41,20 @@
   </div>
 
   <script>
-    const nfftSlider = document.getElementById('n_fft');
+    const windowSlider = document.getElementById('window_size');
+    const srSlider = document.getElementById('sampling_rate');
     const hopSlider = document.getElementById('hop_length');
-    const nfftVal = document.getElementById('n_fft_val');
+
+    const windowVal = document.getElementById('window_val');
+    const srVal = document.getElementById('sr_val');
     const hopVal = document.getElementById('hop_val');
 
-    nfftSlider.oninput = () => nfftVal.textContent = nfftSlider.value;
+    windowSlider.oninput = () => windowVal.textContent = windowSlider.value;
+    srSlider.oninput = () => srVal.textContent = srSlider.value;
     hopSlider.oninput = () => hopVal.textContent = hopSlider.value;
 
     document.getElementById('uploadForm').onsubmit = function(e) {
       e.preventDefault();
-
       const formData = new FormData(this);
       fetch('/generate', {
         method: 'POST',
